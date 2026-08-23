@@ -1,33 +1,33 @@
 {
-	"name": "pi-output-styles",
-	"version": "1.0.0",
-	"description": "",
-	"license": "MIT",
-	"author": "",
-	"type": "module",
-	"main": "index.js",
-	"directories": {
-		"doc": "docs"
-	},
-	"packageManager": "pnpm@11.22.0",
-	"scripts": {
-		"test": "node --test src/pi-output-styles.test.ts",
-		"lint": "oxlint",
-		"lint:fix": "oxlint --fix"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "2.5.8",
-		"@earendil-works/pi-coding-agent": "^0.84.2",
-		"oxlint": "^1.79.0",
-		"oxlint-tsgolint": "^7.0.2001",
-		"typescript": "^7.0.2"
-	},
-	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "*"
-	},
-	"pi": {
-		"extensions": [
-			"./extensions/pi-output-styles.ts"
-		]
-	}
+  "name": "pi-output-styles",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "packageManager": "pnpm@11.22.0",
+  "scripts": {
+    "test": "node --test src/pi-output-styles.test.ts",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.8",
+    "@earendil-works/pi-coding-agent": "^0.84.2",
+    "oxlint": "^1.79.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "typescript": "^7.0.2"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/pi-output-styles.ts"
+    ]
+  }
 }
