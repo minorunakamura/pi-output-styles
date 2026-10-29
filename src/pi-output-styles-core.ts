@@ -75,41 +75,46 @@ export async function loadStyleFile(
 }
 
 export async function discoverStyles(
-  styleDirectory: string,
+  styleDirectories: string | readonly string[],
   parseFrontmatter: FrontmatterParser,
 ): Promise<DiscoveryResult> {
-  let entries: Dirent[];
-  try {
-    entries = await readdir(styleDirectory, { withFileTypes: true });
-  } catch (error) {
-    if (hasErrorCode(error, "ENOENT")) {
-      return { styles: [], warnings: [] };
-    }
-    return {
-      styles: [],
-      warnings: [
-        `Unable to read style directory ${styleDirectory}: ${String(error)}`,
-      ],
-    };
-  }
-
-  const styles: OutputStyle[] = [];
+  const directories =
+    typeof styleDirectories === "string"
+      ? [styleDirectories]
+      : styleDirectories;
+  const styles = new Map<string, OutputStyle>();
   const warnings: string[] = [];
-  for (const entry of entries) {
-    if (!entry.isFile() || extname(entry.name) !== ".md") continue;
-    const filePath = join(styleDirectory, entry.name);
+  for (const styleDirectory of directories) {
+    let entries: Dirent[];
     try {
-      // Preserve directory order and deterministic warning/error timing.
+      // Preserve directory precedence and deterministic warning/error timing.
       // oxlint-disable-next-line no-await-in-loop
-      styles.push(await loadStyleFile(filePath, parseFrontmatter));
+      entries = await readdir(styleDirectory, { withFileTypes: true });
     } catch (error) {
-      warnings.push(
-        `${filePath}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      if (!hasErrorCode(error, "ENOENT")) {
+        warnings.push(
+          `Unable to read style directory ${styleDirectory}: ${String(error)}`,
+        );
+      }
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isFile() || extname(entry.name) !== ".md") continue;
+      const filePath = join(styleDirectory, entry.name);
+      try {
+        // oxlint-disable-next-line no-await-in-loop
+        const style = await loadStyleFile(filePath, parseFrontmatter);
+        styles.set(style.id, style);
+      } catch (error) {
+        warnings.push(
+          `${filePath}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
   }
 
-  const selectable = styles.filter((style) => {
+  const selectable = [...styles.values()].filter((style) => {
     if (style.name === "Default") {
       warnings.push(
         `${style.path}: reserved display name "Default" is not allowed`,
