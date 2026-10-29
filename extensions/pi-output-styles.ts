@@ -1,5 +1,6 @@
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -61,7 +62,10 @@ export default function piOutputStylesExtension(pi: ExtensionAPI) {
 
   async function refresh(ctx: ExtensionContext): Promise<void> {
     const discovered = await discoverStyles(
-      join(ctx.cwd, CONFIG_DIR_NAME, "pi-output-styles"),
+      [
+        fileURLToPath(new URL("../src/pi-output-styles/", import.meta.url)),
+        join(ctx.cwd, CONFIG_DIR_NAME, "pi-output-styles"),
+      ],
       parseFrontmatter,
     );
     styles = discovered.styles;

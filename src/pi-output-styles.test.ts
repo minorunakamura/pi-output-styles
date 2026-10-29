@@ -3,6 +3,11 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type {
+  ExtensionAPI,
+  ExtensionCommandContext,
+} from "@earendil-works/pi-coding-agent";
+import piOutputStylesExtension from "../extensions/pi-output-styles.ts";
 import {
   discoverStyles,
   loadStyleFile,
@@ -158,6 +163,99 @@ void test("discoverStyles excludes the reserved Default display name", async () 
       (warning) =>
         warning.includes(stylePath) &&
         warning.includes('reserved display name "Default"'),
+    ),
+  );
+});
+
+void test("the picker includes bundled styles in a project without custom styles", async () => {
+  let handler:
+    | Parameters<ExtensionAPI["registerCommand"]>[1]["handler"]
+    | undefined;
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Only the registration APIs are exercised.
+  piOutputStylesExtension({
+    registerCommand(
+      _name: string,
+      command: Parameters<ExtensionAPI["registerCommand"]>[1],
+    ) {
+      handler = command.handler;
+    },
+    on() {},
+  } as unknown as ExtensionAPI);
+
+  let choices: string[] = [];
+  const warnings: string[] = [];
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Only the picker context APIs are exercised.
+  const ctx = {
+    cwd: await tempDir(),
+    hasUI: true,
+    ui: {
+      setStatus() {},
+      notify(message: string) {
+        warnings.push(message);
+      },
+      async select(_title: string, options: string[]) {
+        choices = options;
+        return undefined;
+      },
+    },
+  } as unknown as ExtensionCommandContext;
+
+  assert.ok(handler);
+  await handler("", ctx);
+  assert.deepEqual(choices, [
+    "Default",
+    "Diagrams first",
+    "Explanatory",
+    "Learning",
+    "Pi Extension Learning",
+  ]);
+  assert.deepEqual(warnings, []);
+});
+
+void test("discoverStyles merges directories with later files overriding the same id", async () => {
+  const bundled = await tempDir();
+  const local = await tempDir();
+  await writeFile(
+    join(bundled, "learning.md"),
+    markdown({ name: "Learning", "keep-coding-instructions": true }),
+  );
+  await writeFile(
+    join(bundled, "explanatory.md"),
+    markdown({ name: "Explanatory", "keep-coding-instructions": true }),
+  );
+  await writeFile(
+    join(local, "learning.md"),
+    markdown(
+      { name: "My Learning", "keep-coding-instructions": true },
+      "Local instructions",
+    ),
+  );
+  await writeFile(
+    join(local, "custom.md"),
+    markdown({ name: "Custom", "keep-coding-instructions": true }),
+  );
+
+  const result = await discoverStyles([bundled, local], parseFrontmatter);
+  assert.deepEqual(
+    result.styles.map((style) => style.id),
+    ["custom", "explanatory", "learning"],
+  );
+  assert.equal(result.styles[2]?.name, "My Learning");
+  assert.equal(result.styles[2]?.body, "Local instructions");
+  assert.deepEqual(result.warnings, []);
+
+  await writeFile(
+    join(local, "collision.md"),
+    markdown({ name: "Explanatory", "keep-coding-instructions": true }),
+  );
+  const collision = await discoverStyles([bundled, local], parseFrontmatter);
+  assert.deepEqual(
+    collision.styles.map((style) => style.id),
+    ["custom", "learning"],
+  );
+  assert.ok(
+    collision.warnings.some((warning) =>
+      warning.includes("Duplicate style name"),
     ),
   );
 });
